@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TigerType — Apple Minimalist Typing & Race</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">    
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/typing-area.css">
+  <link rel="stylesheet" href="css/race-track.css">
+  <link rel="stylesheet" href="css/results-modal.css">
+
+  <!-- PeerJS for Zero-Server WebRTC Multiplayer -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand" id="brand-logo">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-title">tiger<span>type</span></div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Sound switch toggle -->
+        <button class="icon-btn" id="sound-toggle-btn" title="Klaviatura ovozi profili">
+          <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          <span id="sound-label">Clicky Blue</span>
+        </button>
+
+        <!-- Multiplayer / Race Mode button -->
+        <button class="icon-btn" id="open-race-btn" title="Poyga rejimi (Multiplayer / AI Bot)">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+          <span>Poyga (Race)</span>
+        </button>
+
+        <!-- History Modal button -->
+        <button class="icon-btn" id="open-history-btn" title="Natijalar tarixi">
+          <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          <span>Tarix</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Controls Selector Pill (Monkeytype style) -->
+    <section class="controls-container">
+      <div class="controls-pill">
+        
+        <!-- Language Group -->
+        <div class="control-group" id="lang-selector">
+          <button class="pill-option active" data-lang="english">english</button>
+          <button class="pill-option" data-lang="uzbek">o'zbek</button>
+          <button class="pill-option" data-lang="code">code syntax</button>
+        </div>
+
+        <div class="control-divider"></div>
+
+        <!-- Mode Group: Time or Words -->
+        <div class="control-group" id="mode-type-selector">
+          <button class="pill-option active" data-mode-type="time">vaqt</button>
+          <button class="pill-option" data-mode-type="words">so'zlar</button>
+        </div>
+
+        <div class="control-divider"></div>
+
+        <!-- Mode Values Group (15, 30, 60 or 10, 25, 50, 100) -->
+        <div class="control-group" id="mode-val-selector">
+          <button class="pill-option" data-val="15">15</button>
+          <button class="pill-option active" data-val="30">30</button>
+          <button class="pill-option" data-val="60">60</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Real-Time Race Track (Hidden in Solo mode, Visible in PvP/Bot race) -->
+    <section class="race-container" id="race-tracks-section">
+      <div class="room-status-bar">
+        <div>
+          Rejim: <strong id="race-mode-label" style="color: var(--text-primary);">Do'st bilan poyga</strong> 
+          <span class="room-badge" id="race-room-code-tag"></span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="copy-room-btn" id="copy-room-link-btn">Havolani nusxalash</button>
+          <button class="copy-room-btn" id="leave-race-btn" style="color: var(--accent-red);">Chiqish</button>
+        </div>
+      </div>
+
+      <!-- Player 1 Track (You) -->
+      <div class="race-track" id="player-track">
+        <div class="track-progress-fill" id="player-track-fill"></div>
+        <div class="racer-info">
+          <div class="racer-avatar">⚡</div>
+          <span class="racer-name" id="player-name-display">Siz</span>
+        </div>
+        <div class="track-lane">
+          <div class="racer-runner" id="player-runner" style="left: 0%;">
+            <span class="racer-icon">🏎️</span>
+            <span class="racer-speed" id="player-live-wpm">0 WPM</span>
+          </div>
+        </div>
+        <div class="track-finish-line">🏁</div>
+      </div>
+
+      <!-- Player 2 / AI Bot Track -->
+      <div class="race-track" id="opponent-track">
+        <div class="track-progress-fill" id="opponent-track-fill"></div>
+        <div class="racer-info">
+          <div class="racer-avatar" id="opponent-avatar">🤖</div>
+          <span class="racer-name" id="opponent-name-display">Raqib</span>
+        </div>
+        <div class="track-lane">
+          <div class="racer-runner" id="opponent-runner" style="left: 0%;">
+            <span class="racer-icon" id="opponent-runner-icon">🚗</span>
+            <span class="racer-speed" id="opponent-live-wpm">0 WPM</span>
+          </div>
+        </div>
+        <div class="track-finish-line">🏁</div>
+      </div>
+    </section>
+
+    <!-- Live Heads-Up Display (HUD) -->
+    <section class="live-hud" id="live-hud">
+      <div class="hud-stat">
+        <span class="hud-val" id="hud-timer">30</span>
+        <span class="hud-label" id="hud-timer-label">sekund</span>
+      </div>
+
+      <div class="hud-stat">
+        <span class="hud-val" id="hud-wpm">0</span>
+        <span class="hud-label">wpm</span>
+      </div>
+
+      <div class="hud-stat">
+        <span class="hud-val" id="hud-acc">100%</span>
+        <span class="hud-label">aniqlik</span>
+      </div>
+    </section>
+
+    <!-- Typing Main Container -->
+    <main class="typing-wrapper" id="typing-wrapper" tabindex="0">
+      <input type="text" id="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      
+      <!-- Caret -->
+      <div id="caret" class="blink"></div>
+
+      <!-- Words view (3 lines) -->
+      <div class="words-container" id="words-container">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Focus overlay -->
+      <div class="focus-warning" id="focus-warning">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span>Yozishni boshlash uchun bosing yoki tugmani bosing</span>
+      </div>
+    </main>
+
+    <!-- Restart bar -->
+    <div class="restart-bar">
+      <button class="restart-btn" id="restart-test-btn" title="Qaytadan boshlash (Tab + Enter)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        <span>Qayta boshlash</span>
+      </button>
+    </div>
+
+    <!-- Minimalist Footer -->
+    <footer class="app-footer">
+      <div class="keyboard-shortcut">
+        <span class="kbd">tab</span> + <span class="kbd">enter</span> qayta boshlash
+      </div>
+      <div>
+        TigerType &bull; Apple Minimalist &bull; WebRTC Zero-Server
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Results Summary Modal -->
+  <div class="modal-overlay" id="results-modal">
+    <div class="modal-card results-card glass-panel">
+      <div class="results-header">
+        <div class="results-headline">
+          <h2>Sinov yakunlandi</h2>
+          <p id="res-mode-detail">30s &bull; English</p>
+        </div>
+        <div id="res-pb-badge" class="pb-badge" style="display: none;">
+          👑 Yangi Shaxsiy Rekord!
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Primary Big Stats -->
+      <div class="stats-hero-grid">
+        <div class="stat-hero-box">
+          <span class="label">Net Tezlik (WPM)</span>
+          <span class="value" id="res-net-wpm">0</span>
+        </div>
+        <div class="stat-hero-box">
+          <span class="label">Aniqlik</span>
+          <span class="value" id="res-acc" style="color: var(--text-primary);">100%</span>
+        </div>
+      </div>
+
+      <!-- Secondary Breakdown -->
+      <div class="stats-detail-grid">
+        <div class="stat-mini-box">
+          <span class="mini-label">Gross WPM</span>
+          <span class="mini-val" id="res-gross-wpm">0</span>
+        </div>
+        <div class="stat-mini-box">
+          <span class="mini-label">CPM</span>
+          <span class="mini-val" id="res-cpm">0</span>
+        </div>
+        <div class="stat-mini-box">
+          <span class="mini-label">Barqarorlik</span>
+          <span class="mini-val" id="res-consistency">100%</span>
+        </div>
+        <div class="stat-mini-box">
+          <span class="mini-label">Xatolar</span>
+          <span class="mini-val" id="res-errors" style="color: var(--accent-red);">0</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Canvas Chart -->
+      <div class="chart-container">
+        <canvas id="speed-chart"></canvas>
+      </div>
+
+      <!-- Actions -->
+      <div class="results-actions">
+        <button class="secondary-btn modal-backdrop-close">Yopish</button>
+        <button class="primary-btn" id="res-next-btn">
+          Keyingi mashq (Tab + Enter)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multiplayer & AI Bot Modal -->
+  <div class="modal-overlay" id="multiplayer-modal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3 class="modal-title">Poyga Rejimi (Race Mode)</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: AI Bot Solo Race -->
+        <div style="background: var(--bg-primary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--bg-glass-border);">
+          <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--text-primary);">🤖 Sun'iy Intellekt (AI Bot) bilan poyga</h4>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Do'stingiz kutmasdan darhol bot tezligini tanlab poygalashing:</p>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;" id="bot-speed-pills">
+            <button class="pill-option" data-bot-wpm="30">30 WPM</button>
+            <button class="pill-option active" data-bot-wpm="60">60 WPM</button>
+            <button class="pill-option" data-bot-wpm="85">85 WPM</button>
+            <button class="pill-option" data-bot-wpm="110">110 WPM</button>
+          </div>
+
+          <button class="primary-btn" id="start-bot-race-btn" style="width: 100%;">
+            Bot bilan poygani boshlash
+          </button>
+        </div>
+
+        <div style="text-align: center; color: var(--text-tertiary); font-size: 12px; margin: 4px 0;">YOKI</div>
+
+        <!-- Tab 2: Create or Join WebRTC Room -->
+        <div style="background: var(--bg-primary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--bg-glass-border);">
+          <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--text-primary);">⚡ Do'st bilan real-vaqt PvP</h4>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Xona yarating yoki do'stingiz bergan kod bilan kiring:</p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="secondary-btn" id="create-room-btn">
+              Yangi shaxsiy xona yaratish
+            </button>
+            
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="join-room-input" class="input-field" placeholder="Xona kodi (masalan: tiger-abc123)">
+              <button class="primary-btn" id="join-room-btn" style="white-space: nowrap;">Ulanish</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal-card glass-panel" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Natijalar Tarixi (Mahalliy)</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="max-height: 380px; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--bg-glass-border); color: var(--text-secondary);">
+                <th style="padding: 10px 8px;">WPM</th>
+                <th style="padding: 10px 8px;">Aniqlik</th>
+                <th style="padding: 10px 8px;">Rejim</th>
+                <th style="padding: 10px 8px;">Til</th>
+                <th style="padding: 10px 8px;">Vaqt</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 14px;">
+          <button class="secondary-btn" id="export-history-btn" style="font-size: 12px; padding: 8px 14px;">Eksport JSON</button>
+          <button class="secondary-btn modal-backdrop-close" style="font-size: 12px; padding: 8px 14px;">Yopish</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript App Entry (ES Modules) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
